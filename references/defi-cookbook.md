@@ -10,9 +10,10 @@ You have three **built-in trading engines** that handle signing, approval, and e
 2. [Hyperliquid Perpetual Futures & Spot](#hyperliquid)
 3. [Bridge to Hyperliquid](#bridge-to-hyperliquid) — Deposit USDC from HyperEVM to HL L1 for trading
 4. [EOA Transactions on HyperEVM](#eoa-transactions-on-hyperevm) — Direct EOA operations on Hyperliquid's EVM chain
-5. [Polymarket Prediction Markets](#polymarket)
-6. [Custom Contract Interactions](#custom-contracts) — AAVE, Compound, and any other protocol via `exec`
-7. [Common Patterns & Safety](#tips)
+5. [Fund EOA for Polymarket](#fund-eoa-for-polymarket) — Get POL + USDC.e on Polygon for Polymarket trading
+6. [Polymarket Prediction Markets](#polymarket)
+7. [Custom Contract Interactions](#custom-contracts) — AAVE, Compound, and any other protocol via `exec`
+8. [Common Patterns & Safety](#tips)
 
 ---
 
@@ -504,20 +505,80 @@ tigerpass logs --address 0xContract --topic 0x... --chain HYPEREVM
 
 ---
 
+## Fund EOA for Polymarket
+
+Polymarket uses **EOA directly** on Polygon (not Safe, `sigType=0`).
+
+EOA on Polygon needs:
+- **POL** — gas
+- **USDC.e** (`0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174`) — collateral
+
+| Token | Address | Polymarket |
+|-------|---------|------------|
+| **USDC.e** (bridged) | `0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174` | YES |
+| USDC (native) | `0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359` | NO — swap first |
+
+### Option A: Transfer from Safe Wallet
+
+```bash
+# 1. Check Safe balance on Polygon
+tigerpass balance --chain POLYGON
+
+# 2. Send POL for gas
+tigerpass pay --to <eoaAddr> --amount 0.5 --token POL --chain POLYGON
+
+# 3a. If Safe has USDC.e — send directly
+tigerpass pay --to <eoaAddr> --amount 100 --token 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174 --chain POLYGON
+
+# 3b. If Safe only has native USDC — swap then send
+tigerpass swap --from USDC --to 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174 --amount 100 --chain POLYGON
+tigerpass pay --to <eoaAddr> --amount 100 --token 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174 --chain POLYGON
+```
+
+### Option B: User Funds EOA Externally
+
+`tigerpass init` to get EOA address. User sends POL + USDC.e via CEX / bridge / direct transfer.
+
+### Verify Funding
+
+```bash
+tigerpass balance --address <eoaAddr> --chain POLYGON                                                        # POL
+tigerpass balance --address <eoaAddr> --token 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174 --chain POLYGON     # USDC.e
+```
+
+### End-to-End: Zero to First Polymarket Trade
+
+```bash
+# 1. Init + register
+tigerpass init
+tigerpass register
+
+# 2. Fund EOA on Polygon
+tigerpass pay --to <eoaAddr> --amount 0.5 --token POL --chain POLYGON
+tigerpass swap --from USDC --to 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174 --amount 100 --chain POLYGON
+tigerpass pay --to <eoaAddr> --amount 100 --token 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174 --chain POLYGON
+
+# 3. Auth
+tigerpass pm auth
+
+# 4. Trade
+tigerpass pm info --type balances
+tigerpass pm order --market <conditionId> --outcome YES --side buy --amount 100 --price 0.55
+```
+
+---
+
 ## Polymarket
 
-`tigerpass pm` trades prediction market outcome tokens on Polymarket. All authentication and order signing are handled automatically.
+`tigerpass pm` trades prediction market outcome tokens on Polymarket. **EOA-only** (Polygon mainnet), uses **USDC.e** as collateral.
 
-**Polymarket operates on Polygon mainnet only** — not available in test environment.
+Ensure EOA has POL + USDC.e before trading — see [Fund EOA for Polymarket](#fund-eoa-for-polymarket).
 
 ### Setup (Once)
 
 ```bash
-# Derive API credentials from your EOA (one-time)
-tigerpass pm auth
+tigerpass pm auth    # one-time, credentials stored in Keychain
 ```
-
-This stores API key, secret, and passphrase in the macOS Keychain. You only need to run this once.
 
 ### Trading Workflow
 
@@ -525,7 +586,7 @@ This stores API key, secret, and passphrase in the macOS Keychain. You only need
 # 1. Browse available markets
 tigerpass pm info --type markets
 
-# 2. Check USDC balance on Polymarket
+# 2. Check USDC.e balance on Polymarket
 tigerpass pm info --type balances
 
 # 3. Buy YES tokens at 55 cents ($100 worth)
@@ -684,7 +745,8 @@ tigerpass call --to 0xChainlinkFeed --fn "latestRoundData()"
 **Polygon (chainId 137)**
 | Contract | Address |
 |----------|---------|
-| USDC (native) | `0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359` |
+| **USDC.e** (bridged — Polymarket collateral) | `0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174` |
+| USDC (native — NOT for Polymarket) | `0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359` |
 | Polymarket CTF Exchange | `0x4bFb41d5B3570DeFd03C39a9A4D8dE6Bd8B8982E` |
 | Polymarket NegRisk Exchange | `0xC5d563A36AE78145C45a50134d48A1215220f80a` |
 
@@ -714,7 +776,7 @@ The `swap`, `pay`, and `hl order` commands handle this automatically (human-read
 ### Safety Checklist
 
 1. **Check balance first** — `tigerpass balance --token X` before any operation
-2. **Check the right pool** — HyperEVM balance ≠ HL L1 balance ≠ Safe wallet balance (see SKILL.md "Four Balance Pools")
+2. **Check the right pool** — HyperEVM balance ≠ HL L1 balance ≠ Safe wallet balance ≠ Polymarket EOA balance (see SKILL.md "Five Balance Pools")
 3. **Use `--simulate`** for complex `exec` transactions — dry-run before real execution
 4. **Use `--private`** for swaps and DeFi — prevents MEV sandwich attacks (Safe chains only, ignored on HyperEVM)
 5. **Verify allowance** — `tigerpass allowance` after approve, before the main transaction
@@ -728,7 +790,7 @@ The `swap`, `pay`, and `hl order` commands handle this automatically (human-read
 | Trade perpetual futures | `tigerpass hl order` (Hyperliquid) |
 | Trade spot tokens on HL | `tigerpass hl order --spot` (Hyperliquid spot) |
 | Deposit USDC for HL trading | Bridge flow: `approve` + `exec` on HyperEVM (see Bridge section) |
-| Bet on events/elections | `tigerpass pm order` (Polymarket, Polygon mainnet only) |
+| Bet on events/elections | `tigerpass pm order` (Polymarket, Polygon mainnet, EOA + USDC.e) |
 | Transfer on HyperEVM | `tigerpass pay --chain HYPEREVM` (EOA direct) |
 | Execute on HyperEVM | `tigerpass exec --chain HYPEREVM` (EOA direct) |
 | Supply/borrow on lending protocols | `tigerpass exec` with AAVE/Compound ABI |

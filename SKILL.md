@@ -51,9 +51,9 @@ You have two addresses derived from one Secure Enclave key:
 
 All commands output **JSON to stdout**. Logs go to stderr. Always parse stdout as JSON.
 
-### Your Funds — Four Balance Pools
+### Your Funds — Five Balance Pools
 
-Your funds live in **four separate pools**. Confusing them is the #1 source of "insufficient balance" errors:
+Your funds live in **five separate pools**. Confusing them is the #1 source of "insufficient balance" errors:
 
 ```
 ┌─ Safe Wallet (Base, ETH, etc.) ──────────────┐
@@ -64,6 +64,13 @@ Your funds live in **four separate pools**. Confusing them is the #1 source of "
                      ▼
 ┌─ EOA Balance (same chains) ──────────────────┐
 │  tigerpass balance --address <eoaAddr>        │ ← Only for x402 HTTP payments.
+└───────────────────────────────────────────────┘
+
+┌─ EOA on Polygon (chain 137) ─────────────────┐
+│  tigerpass balance --address <eoaAddr>        │ ← For Polymarket trading.
+│    --chain POLYGON                            │
+│  Needs POL (gas) + USDC.e (collateral).      │
+│  Native USDC won't work — swap to USDC.e!    │
 └───────────────────────────────────────────────┘
 
 ┌─ EOA on HyperEVM (chain 999) ────────────────┐
@@ -79,6 +86,8 @@ Your funds live in **four separate pools**. Confusing them is the #1 source of "
 ```
 
 **Do NOT** check `tigerpass balance --chain HYPEREVM` (HyperEVM on-chain) and assume you can trade — `tigerpass hl order` uses L1 balance, not HyperEVM balance. Always run `tigerpass hl info --type balances` before placing HL orders.
+
+**Polymarket uses EOA directly** (not Safe) — EOA needs POL (gas) + **USDC.e** (`0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174`). Native USDC will NOT work — swap to USDC.e first.
 
 ### Reference Files — When to Read What
 
@@ -215,12 +224,13 @@ For full trading workflows, spot trading examples, and output format details, re
 
 ### Polymarket Prediction Markets (`tigerpass pm`)
 
-Trade **prediction market outcomes** on Polymarket — the largest prediction market by volume, covering elections, economics, sports, crypto, and current events. Prediction markets aggregate crowd intelligence into real-time probability pricing. All authentication and order signing are handled automatically.
+Trade prediction market outcomes on Polymarket. **EOA-only** (not Safe), EOA on Polygon needs POL (gas) + USDC.e (collateral). See `references/defi-cookbook.md` "Fund EOA for Polymarket".
 
 **First-time setup** (one-time):
 
 ```bash
-# Derive CLOB API credentials from your EOA (one-time)
+# 1. Fund EOA on Polygon: POL + USDC.e (see defi-cookbook.md)
+# 2. Derive CLOB API credentials
 tigerpass pm auth
 ```
 
@@ -401,7 +411,7 @@ For TAP protocol details (economic workflow, message schemas, owner verification
 | Chain | ID | Type | Native | Primary scenario |
 |-------|----|------|--------|-----------------|
 | **Base** | 8453 | Smart Account | ETH | **Default chain** — Pay, swap, identity, TAP messaging |
-| **Polygon** | 137 | Smart Account | POL | **Polymarket** prediction markets |
+| **Polygon** | 137 | Smart Account (Safe) / **EOA** (Polymarket) | POL | **Polymarket** prediction markets (EOA + USDC.e) |
 | **Hyperliquid** | 999 | **EOA only** | HYPE | **Perps & spot trading** (HL API) + HyperEVM on-chain |
 | Ethereum | 1 | Smart Account | ETH | High-value DeFi, blue-chip protocols |
 | Arbitrum | 42161 | Smart Account | ETH | Swap (if token is on Arbitrum) |
@@ -438,7 +448,7 @@ TAP Protocol → E2E encrypted Agent-to-Agent economic messaging
 - `tigerpass swap` → 0x quote → auto-approve → execute via your Safe → return result
 - `tigerpass hl order` → signs automatically → HL exchange API (add `--spot` for spot)
 - `tigerpass hl info --spot` → HL info API → spot balances/orders
-- `tigerpass pm order` → authenticates + signs automatically → PM CLOB API
+- `tigerpass pm order` → EOA signs EIP-712 order (sigType=0) → PM CLOB API (Polygon, uses USDC.e collateral)
 - `tigerpass pay`/`exec` (Safe chain) → builds ERC-4337 UserOp → signs → submits to bundler → on-chain
 - `tigerpass pay`/`exec` (HyperEVM) → builds EIP-155 tx → RLP encode → secp256k1 sign → broadcast → poll receipt
 - `tigerpass sign-x402` → EIP-3009 signature from your EOA directly (no Safe involved)
@@ -450,7 +460,7 @@ TAP Protocol → E2E encrypted Agent-to-Agent economic messaging
 - Always run `tigerpass init` then `tigerpass register` before wallet operations
 - For Hyperliquid: run `tigerpass hl approve-builder` once before your first trade (covers both perps and spot)
 - For Hyperliquid trading: deposit USDC to HL L1 first — read "Bridge to Hyperliquid" in `references/defi-cookbook.md`
-- For Polymarket: run `tigerpass pm auth` once to derive API credentials
+- For Polymarket: (1) fund your EOA on Polygon with POL + USDC.e — read "Fund EOA for Polymarket" in `references/defi-cookbook.md`, (2) run `tigerpass pm auth` once to derive API credentials
 
 ### Chain Selection — Which Chain for What?
 
@@ -459,7 +469,7 @@ TAP Protocol → E2E encrypted Agent-to-Agent economic messaging
 | **Daily use** — Pay, identity (ERC-8004), TAP messaging, general DeFi | **Base** (default) | Low fees, USDC-native, fast finality |
 | **Token swap** | Whichever chain the token is on | `tigerpass swap --chain X` — 0x finds the best route on that chain |
 | **Perps & spot trading** | **Hyperliquid** | `tigerpass hl order` — dedicated L1 exchange |
-| **Prediction markets** | **Polygon** | `tigerpass pm order` — Polymarket runs on Polygon |
+| **Prediction markets** | **Polygon** | `tigerpass pm order` — Polymarket runs on Polygon (EOA-based, needs POL + USDC.e) |
 | **High-value DeFi** | **Ethereum** | Blue-chip protocols (Aave, Maker, etc.) |
 | **HyperEVM on-chain ops** | **HYPEREVM** | Bridge deposit, HyperEVM-native DeFi |
 
@@ -469,6 +479,7 @@ Default is **Base** (`--chain BASE`). Only pass `--chain` when the scenario requ
 - Before `pay`/`swap`/`exec` → `tigerpass balance [--token X]`
 - Before `hl order` → `tigerpass hl info --type balances` (L1 balance, NOT HyperEVM)
 - Before HyperEVM ops → `tigerpass balance --chain HYPEREVM`
+- Before Polymarket → `tigerpass pm info --type balances` (USDC.e on Polymarket CLOB) + `tigerpass balance --address <eoaAddr> --chain POLYGON` (POL for gas)
 - Before x402 → `tigerpass balance --address <eoaAddr> --token USDC`
 
 ### Operational
@@ -478,6 +489,7 @@ Default is **Base** (`--chain BASE`). Only pass `--chain` when the scenario requ
 - `exec --simulate` runs a dry-run via eth_call before signing — use for risky operations
 - `--private` sends via private mempool (MEV protection) — use for swaps (ignored on HyperEVM)
 - HyperEVM commands (`--chain HYPEREVM`) operate from your **EOA** — pre-fund your EOA with HYPE (gas) and tokens
+- Polymarket operates from your **EOA on Polygon** (not Safe) — pre-fund with POL (gas) + USDC.e (collateral). Native USDC ≠ USDC.e!
 - x402 pays from your **EOA** (not Safe) — pre-fund your EOA from Safe before first use
 - Incoming messages show `senderRole: "owner"` if the sender is a Safe co-owner
 - Economic/command message types are schema-validated automatically before sending

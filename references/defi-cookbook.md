@@ -9,7 +9,7 @@ You have three **built-in trading engines** that handle signing, approval, and e
 1. [DEX Swap (0x Aggregator)](#dex-swap)
 2. [Hyperliquid Perpetual Futures & Spot](#hyperliquid)
 3. [Bridge to Hyperliquid](#bridge-to-hyperliquid) — Deposit USDC from HyperEVM to HL L1 for trading
-4. [EOA Transactions on HyperEVM](#eoa-transactions-on-hyperevm) — Direct EOA operations on Hyperliquid's EVM chain
+4. [EOA Transactions](#eoa-transactions) — Direct EOA operations via `--eoa` flag (any chain) or HyperEVM (automatic)
 5. [Fund EOA for Polymarket](#fund-eoa-for-polymarket) — Get POL + USDC.e on Polygon for Polymarket trading
 6. [Polymarket Prediction Markets](#polymarket)
 7. [Custom Contract Interactions](#custom-contracts) — AAVE, Compound, and any other protocol via `exec`
@@ -100,7 +100,8 @@ tigerpass balance --token WETH
 
 - **Sell token must be ERC-20** — use WETH instead of native ETH
 - **0x does not support testnets** — `swap` is unavailable in test environment
-- **Only on Safe chains** — swap is not available on HyperEVM (no 0x support)
+- **Not available on HyperEVM** — 0x has no HyperEVM support
+- **`--eoa` supported** — swap can execute from EOA on any 0x-supported chain (EOA must hold the sell token)
 
 ---
 
@@ -419,69 +420,81 @@ tigerpass hl order --coin BTC --side buy --price 95000 --size 0.01
 
 ---
 
-## EOA Transactions on HyperEVM
+## EOA Transactions
 
-HyperEVM is Hyperliquid's native EVM chain (chain ID 999 mainnet, 998 testnet). Unlike other chains where TigerPass uses a Safe smart account (ERC-4337), HyperEVM is **EOA-only** — all transactions come directly from your EOA address.
+The `--eoa` flag lets you execute transactions directly from your EOA on **any chain**. On HyperEVM (chain ID 999/998), `--eoa` is automatic — it's an EOA-only chain.
 
-Chain type detection is automatic: `--chain HYPEREVM` triggers the EOA transaction path.
+Use `--eoa` when:
+- Your EOA already holds the tokens (funded externally or via `tigerpass pay --to <eoaAddr>`)
+- The target protocol requires EOA interaction
+- You want simpler/faster execution without Smart Account overhead
 
-### Key Differences from Safe Chains
+### Safe vs EOA Path
 
-| | Safe chains (Base, Ethereum, etc.) | HyperEVM |
+| | Safe (default) | EOA (`--eoa` or HyperEVM) |
 |---|---|---|
 | **Transaction source** | Safe wallet (`walletAddress`) | EOA (`eoaAddress`) |
-| **Gas payment** | Paymaster (sponsored) | EOA pays in HYPE |
+| **Gas payment** | Paymaster (sponsored) | EOA pays in native token |
 | **Signing** | ERC-4337 UserOp | EIP-155 legacy tx |
 | **Batch exec** | Atomic (multiSend) | Sequential (non-atomic) |
-| **Private mempool** | Supported (`--private`) | Not supported (ignored) |
+| **Private mempool** | Supported (`--private`) | Not available |
 | **Output field** | `walletAddress`, `userOpHash` | `fromAddress`, `txHash` |
+| **Available on** | All Smart Account chains | Any chain (flag) / HyperEVM (auto) |
 
-### Transfer on HyperEVM
+### Transfer with --eoa
 
 ```bash
-# Send HYPE (native token)
+# Send from EOA on Base
+tigerpass pay --to 0xRecipient --amount 10 --token USDC --eoa
+
+# Send HYPE on HyperEVM (--eoa is automatic)
 tigerpass pay --to 0xRecipient --amount 0.1 --chain HYPEREVM
 
-# Send USDC
+# Send USDC on HyperEVM
 tigerpass pay --to 0xRecipient --amount 10 --token USDC --chain HYPEREVM
 ```
 
-### Approve on HyperEVM
+### Approve with --eoa
 
 ```bash
-# Approve a spender
+# Approve on Base from EOA
+tigerpass approve --token USDC --spender 0xContract --amount 100 --eoa
+
+# Approve on HyperEVM (--eoa is automatic)
 tigerpass approve --token USDC --spender 0xContract --amount 100 --chain HYPEREVM
 
 # Unlimited approval
-tigerpass approve --token USDC --spender 0xContract --amount max --chain HYPEREVM
+tigerpass approve --token USDC --spender 0xContract --amount max --eoa
 ```
 
-### Execute Contracts on HyperEVM
+### Execute with --eoa
 
 ```bash
-# Single call with ABI encoding
+# Execute on any chain from EOA
+tigerpass exec --to 0xContract \
+  --fn "someFunction(address,uint256)" \
+  --fn-args '["0xAddr","1000000"]' \
+  --eoa
+
+# Execute on HyperEVM (--eoa is automatic)
 tigerpass exec --to 0xContract \
   --fn "someFunction(address,uint256)" \
   --fn-args '["0xAddr","1000000"]' \
   --chain HYPEREVM
 
-# Single call with raw calldata
-tigerpass exec --to 0xContract --data 0xa9059cbb... --chain HYPEREVM
-
-# Simulate before executing (dry-run via eth_call)
+# Simulate before executing
 tigerpass exec --to 0xContract \
   --fn "riskyFunction(uint256)" \
-  --fn-args '["1000"]' \
-  --chain HYPEREVM --simulate
+  --fn-args '["1000"]' --eoa --simulate
 
-# Batch calls (executed sequentially — NOT atomic! Max 10 calls.)
+# Batch calls (sequential — NOT atomic! Max 10 calls.)
 tigerpass exec --calls '[
   {"to":"0xA","value":"0x0","data":"0x..."},
   {"to":"0xB","value":"0x0","data":"0x..."}
-]' --chain HYPEREVM
+]' --eoa
 ```
 
-**Batch note**: On HyperEVM, batch `exec --calls` is sequential — each call is a separate transaction. If call 2 fails, call 1 has already executed and cannot be rolled back. Output includes `batchTxHashes` array with individual transaction hashes and a `warning` field.
+**Batch note**: With `--eoa`, batch `exec --calls` is sequential — each call is a separate transaction. If call 2 fails, call 1 has already executed and cannot be rolled back. Output includes `batchTxHashes` array with individual transaction hashes and a `warning` field.
 
 ### Read-Only Operations
 
@@ -542,8 +555,8 @@ tigerpass pay --to <eoaAddr> --amount 100 --token 0x2791Bca1f2de4661ED88A30C99A7
 ### Verify Funding
 
 ```bash
-tigerpass balance --address <eoaAddr> --chain POLYGON                                                        # POL
-tigerpass balance --address <eoaAddr> --token 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174 --chain POLYGON     # USDC.e
+tigerpass balance --eoa --chain POLYGON                                                        # POL
+tigerpass balance --eoa --token 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174 --chain POLYGON     # USDC.e
 ```
 
 ### End-to-End: Zero to First Polymarket Trade
@@ -558,8 +571,9 @@ tigerpass pay --to <eoaAddr> --amount 0.5 --token POL --chain POLYGON
 tigerpass swap --from USDC --to 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174 --amount 100 --chain POLYGON
 tigerpass pay --to <eoaAddr> --amount 100 --token 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174 --chain POLYGON
 
-# 3. Auth
+# 3. Auth + Approve (one-time setup, in order)
 tigerpass pm auth
+tigerpass pm approve
 
 # 4. Trade
 tigerpass pm info --type balances
@@ -574,10 +588,11 @@ tigerpass pm order --market <conditionId> --outcome YES --side buy --amount 100 
 
 Ensure EOA has POL + USDC.e before trading — see [Fund EOA for Polymarket](#fund-eoa-for-polymarket).
 
-### Setup (Once)
+### Setup (Once, in order)
 
 ```bash
-tigerpass pm auth    # one-time, credentials stored in Keychain
+tigerpass pm auth      # 1. Derive API credentials (stored in Keychain)
+tigerpass pm approve   # 2. Approve USDC.e for Polymarket exchange
 ```
 
 ### Trading Workflow
@@ -702,7 +717,7 @@ tigerpass call --to 0xA238Dd80C259a72e81d7e4664a9801593F98d1c5 \
 
 ### Batch Transactions (Approve + Action)
 
-On Safe chains, batch calls are **atomic** — all succeed or all revert.
+On Safe (default), batch calls are **atomic** — all succeed or all revert. With `--eoa`, batch calls are sequential (non-atomic).
 
 ```bash
 # Approve + swap in one atomic transaction (max 10 calls)
@@ -791,8 +806,9 @@ The `swap`, `pay`, and `hl order` commands handle this automatically (human-read
 | Trade spot tokens on HL | `tigerpass hl order --spot` (Hyperliquid spot) |
 | Deposit USDC for HL trading | Bridge flow: `approve` + `exec` on HyperEVM (see Bridge section) |
 | Bet on events/elections | `tigerpass pm order` (Polymarket, Polygon mainnet, EOA + USDC.e) |
-| Transfer on HyperEVM | `tigerpass pay --chain HYPEREVM` (EOA direct) |
-| Execute on HyperEVM | `tigerpass exec --chain HYPEREVM` (EOA direct) |
+| Transfer from EOA (any chain) | `tigerpass pay --eoa` or `--chain HYPEREVM` |
+| Execute from EOA (any chain) | `tigerpass exec --eoa` or `--chain HYPEREVM` |
+| Swap from EOA | `tigerpass swap --eoa` (any 0x-supported chain) |
 | Supply/borrow on lending protocols | `tigerpass exec` with AAVE/Compound ABI |
 | Interact with any other contract | `tigerpass exec --fn` or `--data` |
 | Read on-chain state (no gas) | `tigerpass call --fn` |

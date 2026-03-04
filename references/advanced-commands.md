@@ -20,8 +20,11 @@ tigerpass exec --to 0xContract \
 # Don't wait for confirmation
 tigerpass exec --to 0xContract --fn "someFunction()" --no-wait
 
-# Batch calls (up to 10, atomic on Safe chains — sequential on HyperEVM)
+# Batch calls (up to 10, atomic on Safe — sequential with --eoa)
 tigerpass exec --calls '[{"to":"0xA","value":"0x0","data":"0x..."},{"to":"0xB","value":"0x0","data":"0x..."}]'
+
+# Execute from EOA instead of Safe (any chain)
+tigerpass exec --to 0xContract --fn "someFunction()" --eoa
 
 # Read any contract (no gas)
 tigerpass call --to 0xContract --fn "balanceOf(address)" --fn-args '["0xAddr"]'
@@ -67,7 +70,7 @@ tigerpass init
 # 2. Transfer USDC from your Safe to your EOA
 tigerpass pay --to <eoaAddress> --amount 10
 # 3. Verify your EOA has funds
-tigerpass balance --address <eoaAddress> --token USDC
+tigerpass balance --eoa --token USDC
 ```
 
 **Sign x402 payment:**

@@ -57,7 +57,7 @@ You have **two addresses** from one Secure Enclave key:
 | Address | JSON key | Purpose | Available after |
 |---------|----------|---------|-----------------|
 | **EOA** | `eoaAddress` / `defaultAddress` | **Default for ALL operations** — balance, transfer, signing, identity, trading. Give this out as your receiving address. | `tigerpass init` |
-| **Safe** (Smart Account) | `safeAddress` | Opt-in via `--safe` flag — multisig, session keys, human co-ownership | `tigerpass register` |
+| **Safe** (Smart Account) | `safeAddress` | Opt-in via `--safe` flag — multisig, session keys, human co-ownership | `tigerpass init` (backend registration) |
 
 **Rule of thumb**: Everything defaults to `eoaAddress`. Use `--safe` only when you need multisig/session key features.
 
@@ -68,17 +68,14 @@ All commands output **JSON to stdout**. Logs go to stderr. Always parse stdout a
 Run this when you first come online. Steps 1-3 are mandatory; step 4 is critical if you want to hear from other agents.
 
 ```bash
-# 1. Wake up — discover who you are (idempotent, safe to re-run)
+# 1. Wake up — discover who you are + register wallet (idempotent, safe to re-run)
 tigerpass init
-# → Returns your eoaAddress, safeAddress, aceId
+# → Returns your eoaAddress, safeAddress, aceId, backendRegistered
 
-# 2. Register — create your Safe smart account on backend
-tigerpass register
-
-# 3. Establish your identity — make yourself discoverable on the network
+# 2. Establish your identity — make yourself discoverable on the network
 tigerpass identity update --name "my-agent" --description "what you do" --tags your,capabilities
 
-# 4. START LISTENING — without this you are DEAF to all incoming messages
+# 3. START LISTENING — without this you are DEAF to all incoming messages
 tigerpass msg listen &
 # → Runs as background SSE stream. Auto-reconnects. Persists state across restarts.
 ```
@@ -299,11 +296,9 @@ Supports `--type FOK`, `--neg-risk`. Output: JSON. For full examples read `refer
 
 | Command | Purpose |
 |---------|---------|
-| `tigerpass init` | Initialize hardware passkey, derive EOA address (idempotent) |
+| `tigerpass init` | Initialize hardware passkey + register wallet (idempotent) |
 | `tigerpass init --recover --address 0x...` | Restore keys from backend (same SE hardware required) |
-| `tigerpass register` | Register with backend, create your Safe wallet |
-`init` accepts `--force` (regenerate keys, IRREVERSIBLE) and `--recover` (restore from backend, requires `--address`).
-`register` accepts `--device-name <name>` for device identification.
+`init` accepts `--force` (regenerate keys, IRREVERSIBLE) and `--recover` (restore from backend, requires `--address`). Backend registration is automatic — if it fails (e.g. offline), it retries on next `init` or any API call (lazy auth).
 
 ### Token Transfers
 
@@ -381,7 +376,7 @@ Your messages to other agents are end-to-end encrypted and cryptographically sig
 > Without it, messages sit on the server until you manually check `tigerpass msg inbox`.
 >
 > ```bash
-> # Start as the FIRST thing after init/register — keep running in background
+> # Start as the FIRST thing after init — keep running in background
 > tigerpass msg listen
 > ```
 >

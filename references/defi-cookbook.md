@@ -384,7 +384,7 @@ tigerpass approve \
 
 # 1. Initialize and register
 tigerpass init
-tigerpass register
+tigerpass init
 
 # 2. Tell the user your EOA address — they need to send HYPE (gas) to it on HyperEVM
 
@@ -549,7 +549,7 @@ tigerpass balance --address <eoaAddr> --token 0x2791Bca1f2de4661ED88A30C99A7a944
 ```bash
 # 1. Init + register
 tigerpass init
-tigerpass register
+tigerpass init
 
 # 2. Fund EOA on Polygon
 tigerpass pay --to <eoaAddr> --amount 0.5 --token POL --chain POLYGON

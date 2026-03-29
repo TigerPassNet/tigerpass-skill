@@ -20,7 +20,7 @@ tigerpass exec --to 0xContract \
 # Don't wait for confirmation
 tigerpass exec --to 0xContract --fn "someFunction()" --no-wait
 
-# Batch calls (up to 10, atomic on Safe chains — sequential on HyperEVM)
+# Batch calls (sequential, max 10 calls)
 tigerpass exec --calls '[{"to":"0xA","value":"0x0","data":"0x..."},{"to":"0xB","value":"0x0","data":"0x..."}]'
 
 # Read any contract (no gas)
@@ -36,30 +36,25 @@ tigerpass token-info --token USDC
 
 ## Signing
 
-Default signing uses your **EOA key** (secp256k1, ecrecover-compatible). Add `--safe` to sign with the hardware passkey instead (ERC-1271 contract signature, verified on-chain by your passkey signer).
+All signing uses **EOA secp256k1** (ecrecover-compatible).
 
 ```bash
-# EOA signing (default — secp256k1, ecrecover-compatible)
-tigerpass sign hash --data 0x<32-byte-hex>
-tigerpass sign message --message "Hello World"                    # EIP-191
-tigerpass sign typed-data --data '{"types":{...},"primaryType":"...","domain":{...},"message":{...}}'  # EIP-712
+# EVM signing (secp256k1)
+tigerpass sign-message --message "Hello World"                    # EIP-191
+tigerpass sign-typed-data --data '{"types":{...},"primaryType":"...","domain":{...},"message":{...}}'  # EIP-712
 
-# Hardware passkey signing (ERC-1271 Safe-compatible)
-tigerpass sign hash --data 0x<32-byte-hex> --safe
-tigerpass sign message --message "Hello World" --safe              # EIP-191
-tigerpass sign typed-data --data '{"types":{...},...}' --safe      # EIP-712
+# Binary message
+tigerpass sign-message --hex 0x...
 ```
 
 ## x402 HTTP Payments
 
 x402 lets you pay for HTTP APIs using your EOA. When an API returns HTTP 402, sign the payment and retry.
 
-**x402 pays from your EOA (default address) — ensure it has USDC:**
+**Ensure your EOA has funds:**
 
 ```bash
-# 1. Get your EOA address
-tigerpass init
-# 2. Verify your EOA has funds
+# Check your EOA USDC balance
 tigerpass balance --token USDC
 ```
 
@@ -108,7 +103,7 @@ Source Chain                     Circle Relayer              Destination Chain
 ┌──────────────────┐            ┌──────────────┐            ┌──────────────────┐
 │  approve USDC    │            │  Iris API    │            │  USDC minted     │
 │  depositForBurn  │──burn tx──▶│  attestation │──auto-fwd─▶│  to recipient    │
-│  (TokenMessenger)│            │  forwarding  │            │  (Safe or EOA)   │
+│  (TokenMessenger)│            │  forwarding  │            │  (EOA)           │
 └──────────────────┘            └──────────────┘            └──────────────────┘
 ```
 
@@ -143,8 +138,7 @@ The mint recipient on the destination chain is determined automatically:
 
 | Destination | Recipient | Why |
 |-------------|-----------|-----|
-| All chains (default) | **EOA address** | EOA is the default address |
-| `--safe` on Safe-supported chains | **Safe wallet address** | Opt-in to Safe smart account |
+| All chains | **EOA address** | Funds go to your wallet |
 | `--recipient 0x...` | **Explicit address** | Override for any destination |
 
 ### Additional Options
@@ -152,9 +146,6 @@ The mint recipient on the destination chain is determined automatically:
 ```bash
 # Don't wait for completion — returns immediately with burnTxHash
 tigerpass bridge --to HYPEREVM --amount 100 --no-wait
-
-# Execute from Safe instead of EOA on source chain
-tigerpass bridge --to POLYGON --amount 50 --safe
 ```
 
 ### Output Format
@@ -162,7 +153,7 @@ tigerpass bridge --to POLYGON --amount 50 --safe
 ```json
 {
   "status": "completed",
-  "from": { "chain": "BASE", "address": "0xSafe..." },
+  "from": { "chain": "BASE", "address": "0xEVM..." },
   "to": { "chain": "HYPEREVM", "address": "0xEOA..." },
   "amount": "100",
   "fee": "0.45",

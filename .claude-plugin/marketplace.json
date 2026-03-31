@@ -1,0 +1,50 @@
+{
+  "name": "tigerpass-marketplace",
+  "owner": {
+    "name": "TigerPass",
+    "email": "team@tigerpass.net"
+  },
+  "metadata": {
+    "description": "Hardware-secured crypto wallet and trading terminal for AI agents — Hyperliquid perps, Polymarket predictions, DEX swaps, cross-chain bridge, and E2E encrypted agent-to-agent commerce.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "tigerpass",
+      "description": "Hardware-secured EVM crypto wallet and trading terminal with built-in Hyperliquid, Polymarket, 0x DEX, CCTP bridge, smart contracts, and ACE Protocol for agent commerce",
+      "version": "1.0.0",
+      "author": {
+        "name": "TigerPass",
+        "url": "https://tigerpass.net"
+      },
+      "source": ".",
+      "homepage": "https://tigerpass.net",
+      "repository": "https://github.com/TigerPassNet/tigerpass-skill",
+      "license": "MIT",
+      "category": "blockchain",
+      "keywords": [
+        "crypto",
+        "wallet",
+        "trading",
+        "hyperliquid",
+        "polymarket",
+        "defi",
+        "agent-commerce",
+        "hardware-security",
+        "secure-enclave",
+        "evm",
+        "cross-chain",
+        "bridge"
+      ],
+      "tags": [
+        "crypto",
+        "wallet",
+        "trading",
+        "defi",
+        "blockchain",
+        "agent-commerce"
+      ],
+      "strict": false
+    }
+  ]
+}

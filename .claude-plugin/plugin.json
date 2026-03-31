@@ -1,0 +1,12 @@
+{
+  "name": "tigerpass",
+  "description": "Hardware-secured crypto wallet and trading terminal for AI agents — trade Hyperliquid perps, Polymarket predictions, swap tokens, bridge USDC, and conduct E2E encrypted agent-to-agent commerce. Keys in Apple Secure Enclave.",
+  "version": "1.0.0",
+  "author": {
+    "name": "TigerPass",
+    "url": "https://tigerpass.net"
+  },
+  "homepage": "https://tigerpass.net",
+  "repository": "https://github.com/TigerPassNet/tigerpass-skill",
+  "license": "MIT"
+}

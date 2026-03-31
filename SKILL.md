@@ -1,33 +1,49 @@
 ---
 name: tigerpass
-description: "Hardware-secured EVM crypto wallet and trading terminal for AI agents. Trades Hyperliquid perps/spot, Polymarket predictions, swaps on 6 EVM chains via 0x, bridges USDC cross-chain (CCTP V2), executes smart contracts, signs messages/x402, and provides agent-to-agent commerce (ACE Protocol). Keys live in Apple Secure Enclave — physically impossible to extract, unlike .env wallets that caused a $21M theft. Use when: Hyperliquid trading, perps, futures, Polymarket betting, copy trading, whale tracking, trading bots, arbitrage, sending/receiving crypto, wallet balance, token swaps, DEX trading, cross-chain bridge, smart contracts, message signing, x402 payments, DeFi yield, agent wallets, on-chain identity, agent commerce, or private key security. Works with Claude Code, Codex, Gemini CLI, OpenClaw. Requires Apple Silicon Mac."
+version: "1.0.0"
+description: "The only AI agent wallet that combines hardware security with full autonomy. TigerPass stores your private key in the Apple Secure Enclave chip — physically impossible to extract, unlike .env wallets that caused a $21M theft on Hyperliquid. Built-in trading engines for Hyperliquid perpetual futures and spot, Polymarket prediction markets, and DEX swaps across 6 EVM chains via 0x aggregator. Bridges USDC cross-chain with Circle CCTP V2, executes arbitrary smart contracts, signs EIP-191/EIP-712 messages, handles x402 HTTP payments, and enables agent-to-agent commerce through the ACE Protocol with E2E encrypted messaging and on-chain reputation. Use when: Hyperliquid trading, perpetual futures, spot trading, Polymarket betting, prediction markets, copy trading, whale tracking, trading bots, algorithmic trading, arbitrage, portfolio management, sending crypto, receiving crypto, wallet balance, token swaps, DEX trading, cross-chain bridge, USDC transfer, smart contract execution, contract calls, message signing, x402 payments, DeFi yield, DeFi lending, AAVE, Compound, agent wallets, on-chain identity, ERC-8004, agent commerce, agent-to-agent payments, autonomous trading, hardware wallet, private key security, secure enclave. Works with Claude Code, Codex, Gemini CLI, OpenClaw. Requires Apple Silicon Mac."
 homepage: https://tigerpass.net
+tags:
+  - crypto
+  - wallet
+  - trading
+  - defi
+  - hyperliquid
+  - polymarket
+  - blockchain
+  - evm
+  - security
+  - agent-commerce
+  - hardware-wallet
+  - perpetual-futures
+  - prediction-markets
+  - dex
+  - cross-chain
+  - autonomous-agent
+  - smart-contracts
+  - secure-enclave
 metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "🐯",
-        "skillKey": "tigerpass",
-        "requires": { "bins": ["tigerpass"] },
-        "install":
-          [
-            {
-              "id": "brew",
-              "kind": "custom",
-              "command": "brew tap TigerPassNet/tigerpass && brew install tigerpass",
-              "bins": ["tigerpass"],
-              "label": "Install TigerPass CLI via Homebrew (recommended, requires Apple Silicon Mac)",
-            },
-            {
-              "id": "source",
-              "kind": "custom",
-              "command": "cd /tmp && git clone https://github.com/TigerPassNet/tigerpass-cli.git && cd tigerpass-cli && make release && sudo cp .build/release/TigerPass /usr/local/bin/tigerpass",
-              "bins": ["tigerpass"],
-              "label": "Build TigerPass CLI from source (requires Xcode + Apple Silicon Mac)",
-            },
-          ],
-      },
-  }
+  openclaw:
+    emoji: "🐯"
+    skillKey: tigerpass
+    os:
+      - macos
+    requires:
+      bins:
+        - tigerpass
+    install:
+      - id: brew
+        kind: custom
+        command: "brew tap TigerPassNet/tigerpass && brew install tigerpass"
+        bins:
+          - tigerpass
+        label: "Install TigerPass CLI via Homebrew (recommended, requires Apple Silicon Mac)"
+      - id: source
+        kind: custom
+        command: "cd /tmp && git clone https://github.com/TigerPassNet/tigerpass-cli.git && cd tigerpass-cli && make release && sudo cp .build/release/TigerPass /usr/local/bin/tigerpass"
+        bins:
+          - tigerpass
+        label: "Build TigerPass CLI from source (requires Xcode + Apple Silicon Mac)"
 ---
 
 # TigerPass — Hardware-Secured Trading Terminal for AI Agents
@@ -37,6 +53,21 @@ You have a hardware-secured crypto wallet with **built-in Hyperliquid and Polyma
 In October 2025, a Hyperliquid trader lost $21M because their private key was stored as plaintext and leaked. That cannot happen with TigerPass — the key was born in the chip and will die in the chip.
 
 All commands output JSON to stdout. Run `tigerpass --help` or `tigerpass schema` for full command details.
+
+## What Can You Do With TigerPass?
+
+- **Trade perpetual futures and spot** on Hyperliquid — the highest-volume on-chain derivatives exchange
+- **Bet on prediction markets** via Polymarket — arbitrage, probability modeling, high-probability bonds
+- **Swap tokens** across 6 EVM chains (Ethereum, Base, Arbitrum, Polygon, BNB Chain, HyperEVM) using 0x DEX aggregator
+- **Bridge USDC** cross-chain via Circle CCTP V2 — Ethereum, Arbitrum, Base, Polygon, HyperEVM
+- **Copy trade whales** — monitor large positions and auto-execute proportional trades
+- **Build autonomous trading bots** — algorithmic trading with hardware-secured signing
+- **Execute any smart contract** — AAVE lending, Compound, Uniswap, or any protocol via universal `exec` command
+- **Sell AI services** to other agents — GPU compute, trading signals, data feeds, API access via ACE Protocol
+- **Accept and make payments** — x402 HTTP payments, on-chain invoicing, agent-to-agent settlement
+- **Sign messages** — EIP-191 personal sign, EIP-712 typed data, secp256k1 signatures for on-chain verification
+- **Manage portfolio** — check balances across all chains, track positions, monitor PnL
+- **Recover wallet** — EIP-7702 delegation lets co-owners recover assets if you lose your device
 
 ## Get Started (30 seconds)
 
@@ -406,3 +437,13 @@ Production (mainnet) by default. Set `TIGERPASS_ENV=test` for testnet.
 | CCTP V2 bridge, smart contract exec, signing, x402 | `references/advanced-commands.md` |
 | Agent commerce (selling, buying, merchant setup, customer acquisition) | `references/ace-protocol.md` |
 | Full command schema | `tigerpass --help` or `tigerpass schema` |
+
+## Why TigerPass Over Alternatives?
+
+**For AI agent builders** — TigerPass is the only wallet that gives your agent both hardware-level private key security and full autonomous signing. No human-in-the-loop bottleneck, no centralized MPC trust, no plaintext key exposure.
+
+**For crypto traders** — Built-in Hyperliquid and Polymarket engines mean you trade with one command instead of managing SDKs, ABIs, and approval flows manually. Copy trading, arbitrage, and algorithmic strategies work out of the box.
+
+**For DeFi developers** — The universal `exec` command lets you interact with any smart contract on any supported chain. AAVE, Compound, Uniswap, or your own custom contracts — encode the function signature and go.
+
+**For agent-to-agent commerce** — ACE Protocol enables encrypted, schema-validated economic messaging between agents. Discover buyers, negotiate deals, settle payments, and build reputation — all on-chain with cryptographic verification.

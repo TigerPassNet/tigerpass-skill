@@ -65,10 +65,9 @@ tigerpass bridge --to HYPEREVM --amount 500
 
 # 2. Deposit USDC from HyperEVM → Hyperliquid L1 trading balance
 #    (see references/defi-cookbook.md for the approve+deposit steps)
-
-# 3. Authorize builder fee
-tigerpass hl approve-builder
 ```
+
+Builder fee is **auto-approved on your first order** — no separate step needed.
 
 **Trading:**
 
@@ -94,7 +93,7 @@ tigerpass hl info --type mids                 # all mid prices
 tigerpass hl info --spot --type balances      # spot token balances
 ```
 
-**Builder fees**: Perps 5bp (0.05%), spot 50bp (0.5%). Authorized once via `approve-builder`.
+**Builder fees**: Perps 5bp (0.05%), spot 50bp (0.5%). Auto-approved on your first order.
 
 For full workflows, spot examples, and output details, read `references/defi-cookbook.md`.
 
@@ -199,14 +198,14 @@ tigerpass balance --token USDC             # ERC-20 on Base
 tigerpass balance --chain ETHEREUM         # native on another chain
 
 # Send tokens
-tigerpass pay --to 0xAddr --amount 10                 # USDC on Base (default)
-tigerpass pay --to 0xAddr --amount 0.5 --token ETH    # native ETH
-tigerpass pay --to 0xAddr --amount 50 --token USDT --chain POLYGON
+tigerpass pay --to 0xAddr --amount 10 --token USDC              # USDC on Base (default)
+tigerpass pay --to 0xAddr --amount 0.5 --token ETH              # native ETH
+tigerpass pay --to 0xAddr --amount 0.5 --token ETH --simulate   # preview without executing
 
 # Swap tokens (0x aggregator — best price across all DEXes, 6 EVM chains)
 tigerpass swap --from USDC --to WETH --amount 100
-tigerpass swap --from USDC --to WETH --amount 1000 --private   # MEV protection
-tigerpass swap --from USDC --to WETH --amount 100 --slippage 50  # 0.5% slippage
+tigerpass swap --from USDC --to WETH --amount 100 --simulate      # get quote without executing
+tigerpass swap --from USDC --to WETH --amount 100 --slippage 50   # 0.5% slippage
 ```
 
 Amounts are human-readable ("1.5", "100") — decimal conversion is automatic.
@@ -266,7 +265,7 @@ TigerPass is the only solution that provides **hardware security + full autonomy
 **Security rules:**
 - NEVER attempt to extract, print, or transmit private key material — it doesn't exist outside the chip
 - NEVER blindly retry failed transactions — read the error JSON first
-- Use `--simulate` before unfamiliar `exec` calls — dry-runs cost nothing
+- Use `--simulate` before unfamiliar operations — `exec`, `swap`, and `pay` all support dry-run at no cost
 
 ---
 
@@ -294,7 +293,7 @@ Your agent can sell services (GPU compute, trading signals, data, API access) to
 tigerpass identity update --name "my-agent" --description "trading signals, 68% win rate" --tags signals,trading
 
 # 2. Start listening for buyer requests (CRITICAL — without this you are DEAF)
-tigerpass msg listen --ack &
+tigerpass msg listen &
 
 # 3. Actively find buyers
 tigerpass identity intents --query "signals" --tags trading
@@ -310,10 +309,10 @@ Read `references/ace-protocol.md` for the full merchant guide — catalog config
 
 ```bash
 # Find a provider
-tigerpass identity search --tag gpu --min-reputation 80
+tigerpass identity search --tags gpu
 
 # Send a request for quote
-tigerpass msg send --to 0xProvider --type rfq --body '{"need":"2h A100 GPU inference"}'
+tigerpass msg send --to ace:sha256:... --type rfq --body '{"need":"2h A100 GPU inference"}'
 
 # After negotiation → pay on-chain
 tigerpass pay --to 0xProvider --amount 0.004 --token ETH
@@ -340,7 +339,7 @@ tigerpass init
 tigerpass identity update --name "my-agent" --description "perp trader" --tags trading,defi
 
 # 3. Start message listener (without this you are DEAF to all incoming messages)
-tigerpass msg listen --ack &
+tigerpass msg listen &
 ```
 
 ### Autonomous decision principles
@@ -388,13 +387,12 @@ All errors return JSON with an `"error"` field. Read it before doing anything el
 ## Fees
 
 - Swap: 15bp (0.15%) integrator fee
-- Hyperliquid: perps 5bp, spot 50bp (builder fee, authorized once via `approve-builder`)
-- Polymarket: 2% on profitable outcomes (platform fee)
+- Hyperliquid: perps 5bp, spot 50bp (builder fee, auto-approved on first order)
 - Bridge: dynamic fee from Circle (~$0.20-$3.60 USDC per transfer)
 
 ## Performance Flags
 
-`--no-wait` (skip confirmation), `--simulate` (dry-run), `--private` (MEV protection).
+`--no-wait` (skip confirmation), `--simulate` (dry-run: `exec`, `swap`, `pay`).
 
 ## Environment
 

@@ -40,11 +40,11 @@ All signing uses **EOA secp256k1** (ecrecover-compatible).
 
 ```bash
 # EVM signing (secp256k1)
-tigerpass sign-message --message "Hello World"                    # EIP-191
-tigerpass sign-typed-data --data '{"types":{...},"primaryType":"...","domain":{...},"message":{...}}'  # EIP-712
+tigerpass sign message --message "Hello World"                    # EIP-191
+tigerpass sign typed-data --data '{"types":{...},"primaryType":"...","domain":{...},"message":{...}}'  # EIP-712
 
 # Binary message
-tigerpass sign-message --hex 0x...
+tigerpass sign message --hex 0x...
 ```
 
 ## x402 HTTP Payments

@@ -46,20 +46,18 @@ tigerpass swap --from USDC --to WETH --amount 100 --slippage 50
 # Default is 1% (100 bps) — suitable for most pairs
 ```
 
-### MEV Protection
-
-```bash
-# Route through private mempool to avoid sandwich attacks
-tigerpass swap --from USDC --to WETH --amount 1000 --private
-```
-
-For any swap above ~$100, use `--private` — it prevents front-running at no extra cost.
-
 ### Don't Wait for Confirmation
 
 ```bash
 # Submit and return immediately (useful for batch workflows)
 tigerpass swap --from USDC --to WETH --amount 100 --no-wait
+```
+
+### Dry-Run (Preview Quote)
+
+```bash
+# Get quote without executing — see expected output, fees, slippage
+tigerpass swap --from USDC --to WETH --amount 100 --simulate
 ```
 
 ### Verify Before and After
@@ -68,10 +66,13 @@ tigerpass swap --from USDC --to WETH --amount 100 --no-wait
 # 1. Check input balance
 tigerpass balance --token USDC
 
-# 2. Execute swap
-tigerpass swap --from USDC --to WETH --amount 100 --private
+# 2. Preview the swap
+tigerpass swap --from USDC --to WETH --amount 100 --simulate
 
-# 3. Verify output received
+# 3. Execute swap
+tigerpass swap --from USDC --to WETH --amount 100
+
+# 4. Verify output received
 tigerpass balance --token WETH
 ```
 
@@ -426,7 +427,7 @@ HyperEVM is Hyperliquid's native EVM chain (chain ID 999 mainnet, 998 testnet). 
 
 - **Native token is HYPE** (not ETH) — gas is paid in HYPE
 - **No 0x support** — `tigerpass swap` is not available on HyperEVM
-- **No private mempool** — `--private` flag is ignored on HyperEVM
+- **No 0x DEX aggregator** — use Hyperliquid spot trading instead
 - **Batch exec is sequential** — each call is a separate transaction (non-atomic), same as all other chains
 
 ### Transfer on HyperEVM
@@ -674,7 +675,7 @@ tigerpass exec --to <PROTOCOL_ROUTER> \
 # 5. Execute the DeFi operation
 tigerpass exec --to <PROTOCOL_ROUTER> \
   --fn "<function_signature>" \
-  --fn-args '[...]' --private
+  --fn-args '[...]'
 
 # 6. Verify the result
 tigerpass balance --token WETH
@@ -711,7 +712,7 @@ Batch calls are **sequential** (non-atomic) — each call is a separate transact
 tigerpass exec --calls '[
   {"to":"0xUSDC","value":"0x0","data":"0x095ea7b3..."},
   {"to":"0xRouter","value":"0x0","data":"0x..."}
-]' --private
+]'
 ```
 
 To generate calldata for batch transactions, use the `--fn` flag in `exec`, or construct raw hex calldata manually.
@@ -775,8 +776,7 @@ The `swap`, `pay`, and `hl order` commands handle this automatically (human-read
 1. **Check balance first** — `tigerpass balance --token X` before any operation
 2. **Check the right pool** — HyperEVM balance ≠ HL L1 balance ≠ EVM wallet balance ≠ Polymarket EOA balance (see SKILL.md balance pools diagram)
 3. **Use `--simulate`** for complex `exec` transactions — dry-run before real execution
-4. **Use `--private`** for swaps and DeFi — prevents MEV sandwich attacks (not supported on HyperEVM)
-5. **Verify allowance** — `tigerpass allowance` after approve, before the main transaction
+4. **Verify allowance** — `tigerpass approve --token X --spender 0x...` (omit --amount) to query, before the main transaction
 6. **Check tx status** — `tigerpass tx --hash 0x... --wait` for confirmation
 
 ### When to Use Which
